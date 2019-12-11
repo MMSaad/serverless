@@ -1,0 +1,54 @@
+service:
+  name: first-serverless-demo
+
+
+custom:
+  webpack:
+    webpackConfig: ./webpack.config.js
+    includeModules: true
+
+plugins:
+  - serverless-webpack
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+
+  stage: ${opt:stage,'dev'}
+  region: ${opt:region,'us-east-1'}
+
+  apiGateway:
+    minimumCompressionSize: 1024 # Enable gzip compression for responses > 1 KB
+  environment:
+    AWS_NODEJS_CONNECTION_REUSE_ENABLED: 1
+    GROUP_TABLE: Groups-${self:provider.stage}
+  
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Scan
+      Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.GROUP_TABLE}
+  
+
+functions:
+  GetGroups:
+    handler: src/lambda/http/getGroups.handler
+    events:
+      - http:
+         path: "groups"
+         method: get
+         cors: true
+
+resources:
+  Resources:
+    GroupsDynamoDbTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST
+        TableName: ${self:provider.environment.GROUP_TABLE}
