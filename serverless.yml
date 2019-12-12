@@ -1,14 +1,28 @@
 service:
   name: first-serverless-demo
 
+plugins:
+  - serverless-webpack
+  - serverless-aws-documentation
+  - serverless-reqvalidator-plugin
+
 
 custom:
   webpack:
     webpackConfig: ./webpack.config.js
     includeModules: true
+  documentation:
+    api:
+      info:
+        version: 1.0.0
+        title: udacity serverless api
+        description: testing for udacity serverless module
+    models:
+      - name: GroupRequest
+        contentType: application/json
+        schema: ${file(models/create-group-request.json)}
 
-plugins:
-  - serverless-webpack
+
 
 provider:
   name: aws
@@ -47,9 +61,24 @@ functions:
          path: groups
          method: post
          cors: true
+         reqValidatorName: RequestBodyValidator
+         documentation:
+          summary: Create a new group
+          description: create a new group
+          requestModels:
+            'application/json': GroupRequest
 
 resources:
   Resources:
+    RequestBodyValidator:
+      Type: AWS::ApiGateway::RequestValidator
+      Properties:
+        Name: 'request-body-validator'
+        RestApiId:
+          Ref: ApiGatewayRestApi
+        ValidateRequestBody: true
+        ValidateRequestParameters: false
+    
     GroupsDynamoDbTable:
       Type: AWS::DynamoDB::Table
       Properties:
